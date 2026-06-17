@@ -1,0 +1,168 @@
+#include <iostream>
+#include <windows.h>
+#include <chrono>
+#include <thread>
+#include <atomic>
+#include <csignal>
+
+using namespace std;
+
+int _0 = 968, _1 = 692, _2 = 250, _3 = 20, _4 = 2;
+
+atomic<bool> _5(true);
+atomic<bool> _6(false);
+
+bool _7(int _8, int _9) {
+    HDC _10 = GetDC(NULL);
+    COLORREF _11 = GetPixel(_10, _8, _9);
+    ReleaseDC(NULL, _10);
+    int _12 = GetRValue(_11), _13 = GetGValue(_11), _14 = GetBValue(_11);
+    return (_12 >= _2 && _13 >= _2 && _14 >= _2);
+}
+
+void _15() {
+    POINT _16;
+    GetCursorPos(&_16);
+    mouse_event(MOUSEEVENTF_LEFTDOWN, _16.x, _16.y, 0, 0);
+    Sleep(10);
+    mouse_event(MOUSEEVENTF_LEFTUP, _16.x, _16.y, 0, 0);
+}
+
+void _17(int _18) {
+    _5 = false;
+}
+
+int main() {
+    signal(SIGINT, _17);
+
+    cout << "===========================================" << endl;
+    cout << "   v1.0" << endl;
+    cout << "===========================================" << endl;
+    cout << endl;
+    cout << "Q=Quit  P=Pause" << endl;
+    cout << endl;
+
+    POINT _19;
+    GetCursorPos(&_19);
+    cout << "Press ENTER to lock position" << endl;
+    cin.get();
+    GetCursorPos(&_19);
+    int _20 = _19.x, _21 = _19.y;
+    cout << "Locked: (" << _20 << ", " << _21 << ")" << endl;
+    cout << endl;
+
+    cout << "Running..." << endl;
+    cout << endl;
+
+    SetCursorPos(_20, _21);
+
+    int _22 = 1000 / _3;
+    int _23 = 0, _24 = 0, _25 = 0;
+    bool _26 = false, _27 = false;
+    auto _28 = chrono::steady_clock::now();
+    auto _29 = chrono::steady_clock::now();
+
+    cout << "Waiting..." << endl;
+
+    while (_5) {
+        if (GetAsyncKeyState('Q') & 0x8000) {
+            cout << "\nQuitting..." << endl;
+            break;
+        }
+
+        if (GetAsyncKeyState('P') & 0x8000) {
+            _6 = !_6;
+            if (_6) {
+                cout << "\n⏸️  PAUSED" << endl;
+            }
+            else {
+                cout << "\n▶️  RESUMED" << endl;
+                _28 = chrono::steady_clock::now();
+                _29 = chrono::steady_clock::now();
+            }
+            Sleep(300);
+        }
+
+        if (_6) {
+            Sleep(50);
+            continue;
+        }
+
+        bool _30 = _7(_0, _1);
+
+        if (_27) {
+            auto _31 = chrono::steady_clock::now();
+            auto _32 = chrono::duration_cast<chrono::seconds>(_31 - _29).count();
+            int _33 = _4 - _32;
+
+            if (_33 > 0) {
+                cout << "⏱️  " << _33 << "s...    \r";
+                cout.flush();
+            }
+
+            if (_32 >= _4) {
+                cout << "\nCLICK!" << endl;
+                _15();
+                _24++;
+
+                _27 = false;
+                _26 = false;
+                cout << "Waiting..." << endl;
+            }
+
+            Sleep(50);
+            continue;
+        }
+
+        if (_30) {
+            if (!_26) {
+                _25++;
+                cout << "\n========================================" << endl;
+                cout << "CYCLE #" << _25 << endl;
+                cout << "========================================" << endl;
+                _26 = true;
+                _23 = 0;
+                _28 = chrono::steady_clock::now();
+            }
+
+            auto _34 = chrono::steady_clock::now();
+            auto _35 = chrono::duration_cast<chrono::milliseconds>(_34 - _28).count();
+
+            if (_35 >= _22) {
+                _15();
+                _23++;
+                _24++;
+
+                if (_23 % 20 == 0) {
+                    cout << "CLICKS: " << _23 << "    \r";
+                    cout.flush();
+                }
+
+                _28 = _34;
+            }
+        }
+        else {
+            if (_26 && !_27) {
+                cout << "\nGONE!" << endl;
+                cout << "   Clicks: " << _23 << endl;
+                cout << "⏱️  Waiting " << _4 << "s..." << endl;
+
+                _27 = true;
+                _29 = chrono::steady_clock::now();
+                _26 = false;
+            }
+        }
+
+        Sleep(5);
+    }
+
+    cout << "\n===========================================" << endl;
+    cout << "   STOPPED" << endl;
+    cout << "===========================================" << endl;
+    cout << "Cycles: " << _25 << endl;
+    cout << "Clicks: " << _24 << endl;
+
+    cout << "\nPress ENTER to exit..." << endl;
+    cin.get();
+    return 0;
+}
